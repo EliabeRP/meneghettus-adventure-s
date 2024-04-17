@@ -1,0 +1,37 @@
+# SDL2
+bin/
+build/
+
+# Arquivos de compilação gerados pelo CMake
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+
+# Arquivos de compilação do Visual Studio
+*.sln
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+
+# Arquivos de compilação do Xcode
+*.xcodeproj/
+*.xcworkspace/
+
+# Arquivos de compilação do Code::Blocks
+*.cbp
+*.layout
+
+# Arquivos temporários
+*.o
+*.a
+*.dll
+*.so
+*.dylib
+
+# Arquivos gerados pela execução do programa
+*.exe
+*.out
+
+# Arquivos de dependência do CMake
+CMakeLists.txt.user

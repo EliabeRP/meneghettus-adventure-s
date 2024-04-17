@@ -24,7 +24,6 @@ Makefile
 
 # Arquivos temporários
 *.o
-*.a
 *.dll
 *.so
 *.dylib

@@ -14,8 +14,21 @@ typedef struct {
     float x, y;
     float velocity;
     int life;
-    SDL_Texture *hero_image;
 } Hero;
+
+typedef struct{
+    float x, y;
+    float w, h; 
+}Block;
+
+typedef struct {
+    Hero hero;
+    Block block[100];
+    
+    SDL_Texture *hero_image;
+    SDL_Texture *block_image;
+} Game;
+
 
 void setup() {
     if (SDL_Init(SDL_INIT_EVERYTHING) != 0) {
@@ -48,7 +61,7 @@ void setup() {
 
 }
 
-void process_input(Hero *hero) {
+void process_input(Game *game) {
     SDL_Event event;
     SDL_PollEvent(&event);
 
@@ -61,49 +74,49 @@ void process_input(Hero *hero) {
     const Uint8 *state = SDL_GetKeyboardState(NULL);
 
     if (state[SDL_SCANCODE_RIGHT]) {
-        hero->x += 2.5f;
+        game->hero.x += 2.5f;
     }
     if (state[SDL_SCANCODE_LEFT]) {
-        hero->x -= 2.5f;
+        game->hero.x -= 2.5f;
     }
     if (state[SDL_SCANCODE_UP]) {
-        float bottom_teste = hero->y + 100;
+        float bottom_teste = game->hero.y + 100;
         if (bottom_teste >= WINDOW_HEIGHT) {
-            hero->velocity = 0.03;
-            hero->y -= 50.0f;
+            game->hero.velocity = 0.03;
+            game->hero.y -= 50.0f;
         } 
     }
     if (state[SDL_SCANCODE_DOWN]) {
-        hero->y += 0.1f;
+        game->hero.y += 0.1f;
     }
 }
 
 
 
-void update(Hero *hero) {
-    float bottom_teste = hero->y + 100;
+void update(Game *game) {
+    float bottom_teste = game->hero.y + 100;
 
     if (bottom_teste >= WINDOW_HEIGHT) {
-        hero->velocity = 0;
-        hero->y = WINDOW_HEIGHT - 100;
+        game->hero.velocity = 0;
+        game->hero.y = WINDOW_HEIGHT - 100;
     }
 
-    hero->y += hero->velocity;
-    hero->velocity += GRAVITY;
+    game->hero.y += game->hero.velocity;
+    game->hero.velocity += GRAVITY;
 }
 
-void render(Hero *hero) {
+void render(Game *game) {
     SDL_RenderClear(renderer);
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
 
-    SDL_Rect rectHero = { hero->x, hero->y, 90, 100 };
-    SDL_RenderCopy(renderer, hero->hero_image, NULL, &rectHero);
+    SDL_Rect rectHero = { game->hero.x, game->hero.y, 90, 100 };
+    SDL_RenderCopy(renderer, game->hero_image, NULL, &rectHero);
     
     SDL_RenderPresent(renderer);
 }
 
-void end(Hero *hero) {
-    SDL_DestroyTexture(hero->hero_image);
+void end(Game *game) {
+    SDL_DestroyTexture(game->hero_image);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
     SDL_Quit();
@@ -112,27 +125,26 @@ void end(Hero *hero) {
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow){
     setup();
 
-    Hero hero;
-    hero.x = WINDOW_WIDTH/2;
-    hero.y = WINDOW_HEIGHT/2;
-    hero.velocity = 0.03;
+    Game game;
+    game.hero.x = WINDOW_WIDTH/2;
+    game.hero.y = WINDOW_HEIGHT/2;
+    game.hero.velocity = 0.03;
+
 
     surface = IMG_Load("sprites/teste.png");
     if (!surface) {
         printf("Erro ao carregar a imagem %s\n", SDL_GetError());
         game_is_running = FALSE;
     }
-
-    hero.hero_image = SDL_CreateTextureFromSurface(renderer, surface);
+    game.hero_image = SDL_CreateTextureFromSurface(renderer, surface);
     SDL_FreeSurface(surface);
-
 
     while(game_is_running) {
         int startLoop = SDL_GetTicks();
 
-        process_input(&hero);
-        update(&hero);
-        render(&hero);
+        process_input(&game);
+        update(&game);
+        render(&game);
 
         int delta = SDL_GetTicks() - startLoop;
         if (delta < DESIREDDELTA){
@@ -140,7 +152,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         }
     }
 
-    end(&hero);
+    end(&game);
 
     return 0;
 }

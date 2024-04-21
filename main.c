@@ -9,6 +9,7 @@ SDL_Window *window;
 SDL_Renderer *renderer;
 SDL_Surface *surface;
 
+
 typedef struct {
     float x, y;
     float velocity;
@@ -60,16 +61,16 @@ void process_input(Hero *hero) {
     const Uint8 *state = SDL_GetKeyboardState(NULL);
 
     if (state[SDL_SCANCODE_RIGHT]) {
-        hero->x += 0.1f;
+        hero->x += 2.5f;
     }
     if (state[SDL_SCANCODE_LEFT]) {
-        hero->x -= 0.1f;
+        hero->x -= 2.5f;
     }
     if (state[SDL_SCANCODE_UP]) {
-        float bottom_teste = hero->y + 60;
+        float bottom_teste = hero->y + 100;
         if (bottom_teste >= WINDOW_HEIGHT) {
             hero->velocity = 0.03;
-            hero->y -= 200.0f;
+            hero->y -= 50.0f;
         } 
     }
     if (state[SDL_SCANCODE_DOWN]) {
@@ -80,11 +81,11 @@ void process_input(Hero *hero) {
 
 
 void update(Hero *hero) {
-    float bottom_teste = hero->y + 60;
+    float bottom_teste = hero->y + 100;
 
     if (bottom_teste >= WINDOW_HEIGHT) {
         hero->velocity = 0;
-        hero->y = WINDOW_HEIGHT - 60;
+        hero->y = WINDOW_HEIGHT - 100;
     }
 
     hero->y += hero->velocity;
@@ -95,7 +96,7 @@ void render(Hero *hero) {
     SDL_RenderClear(renderer);
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
 
-    SDL_Rect rectHero = { hero->x, hero->y, 50, 60 };
+    SDL_Rect rectHero = { hero->x, hero->y, 90, 100 };
     SDL_RenderCopy(renderer, hero->hero_image, NULL, &rectHero);
     
     SDL_RenderPresent(renderer);
@@ -127,9 +128,16 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 
     while(game_is_running) {
+        int startLoop = SDL_GetTicks();
+
         process_input(&hero);
         update(&hero);
         render(&hero);
+
+        int delta = SDL_GetTicks() - startLoop;
+        if (delta < DESIREDDELTA){
+            SDL_Delay(DESIREDDELTA - delta);
+        }
     }
 
     end(&hero);

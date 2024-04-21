@@ -4,4 +4,8 @@
 #define WINDOW_WIDTH 1280
 #define WINDOW_HEIGHT 720
 
-#define GRAVITY 0.00001f
+#define FPS 30
+#define DESIREDDELTA 1000/FPS
+
+#define GRAVITY 0.5f
+

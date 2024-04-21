@@ -1,11 +1,20 @@
 #include <stdio.h>
 #include "src/include/SDL2/SDL.h"
+#include "src/include/SDL2/SDL_image.h"
 #include "constants.h"
 #include <windows.h>
 
 int game_is_running = TRUE;
 SDL_Window *window;
 SDL_Renderer *renderer;
+SDL_Surface *surface;
+
+typedef struct {
+    float x, y;
+    float velocity;
+    int life;
+    SDL_Texture *hero_image;
+} Hero;
 
 void setup() {
     if (SDL_Init(SDL_INIT_EVERYTHING) != 0) {
@@ -38,27 +47,62 @@ void setup() {
 
 }
 
-void process_input() {
+void process_input(Hero *hero) {
     SDL_Event event;
+    SDL_PollEvent(&event);
 
-    while (SDL_PollEvent(&event)) {
-        switch (event.type) {
-            case SDL_QUIT:
-                game_is_running = FALSE;
-                break;
-        }
+    switch (event.type) {
+        case SDL_QUIT:
+            game_is_running = FALSE;
+            break;
+    }
+
+    const Uint8 *state = SDL_GetKeyboardState(NULL);
+
+    if (state[SDL_SCANCODE_RIGHT]) {
+        hero->x += 0.1f;
+    }
+    if (state[SDL_SCANCODE_LEFT]) {
+        hero->x -= 0.1f;
+    }
+    if (state[SDL_SCANCODE_UP]) {
+        float bottom_teste = hero->y + 60;
+        if (bottom_teste >= WINDOW_HEIGHT) {
+            hero->velocity = 0.03;
+            hero->y -= 200.0f;
+        } 
+    }
+    if (state[SDL_SCANCODE_DOWN]) {
+        hero->y += 0.1f;
     }
 }
 
-void update() {
-    //TODO
+
+
+void update(Hero *hero) {
+    float bottom_teste = hero->y + 60;
+
+    if (bottom_teste >= WINDOW_HEIGHT) {
+        hero->velocity = 0;
+        hero->y = WINDOW_HEIGHT - 60;
+    }
+
+    hero->y += hero->velocity;
+    hero->velocity += GRAVITY;
 }
 
-void render() {
-    //TODO
+void render(Hero *hero) {
+    SDL_RenderClear(renderer);
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+
+    SDL_Rect rectHero = { hero->x, hero->y, 50, 60 };
+    SDL_RenderCopy(renderer, hero->hero_image, NULL, &rectHero);
+    
+    SDL_RenderPresent(renderer);
 }
 
-void end() {
+void end(Hero *hero) {
+    SDL_DestroyTexture(hero->hero_image);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
     SDL_Quit();
@@ -67,13 +111,28 @@ void end() {
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow){
     setup();
 
-    while(game_is_running) {
-        process_input();
-        update();
-        render();
+    Hero hero;
+    hero.x = WINDOW_WIDTH/2;
+    hero.y = WINDOW_HEIGHT/2;
+    hero.velocity = 0.03;
+
+    surface = IMG_Load("sprites/teste.png");
+    if (!surface) {
+        printf("Erro ao carregar a imagem %s\n", SDL_GetError());
+        game_is_running = FALSE;
     }
 
-    end();
+    hero.hero_image = SDL_CreateTextureFromSurface(renderer, surface);
+    SDL_FreeSurface(surface);
+
+
+    while(game_is_running) {
+        process_input(&hero);
+        update(&hero);
+        render(&hero);
+    }
+
+    end(&hero);
 
     return 0;
 }

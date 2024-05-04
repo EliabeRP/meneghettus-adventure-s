@@ -52,6 +52,16 @@ int test_is_jumping(Game *game) {
     return FALSE;         
 }
 
+void change_spritesheet(Game *game, char *source) {
+    surface = IMG_Load(source);
+        if (!surface) {
+            printf("Erro ao carregar a imagem %s\n", SDL_GetError());
+            game_is_running = FALSE;
+        }
+        game->hero_image = SDL_CreateTextureFromSurface(renderer, surface);
+    SDL_FreeSurface(surface);
+}
+
 void loadTextures(Game *game) {
     surface = IMG_Load("images/background_layer_1.png");
     if (!surface) {
@@ -149,13 +159,7 @@ void process_input(Game *game) {
                     
                     hero_is_jumping = TRUE;
 
-                    surface = IMG_Load("images/sprites/spr_jumping-export.png");
-                    if (!surface) {
-                        printf("Erro ao carregar a imagem %s\n", SDL_GetError());
-                        game_is_running = FALSE;
-                    }
-                    game->hero_image = SDL_CreateTextureFromSurface(renderer, surface);
-                    SDL_FreeSurface(surface);
+                    change_spritesheet(game, "images/sprites/spr_jumping-export.png");
                     
                 }
             }
@@ -169,49 +173,24 @@ void process_input(Game *game) {
         position = RIGHT;
         hero_is_running = TRUE;
 
-        surface = IMG_Load("images/sprites/spr_running-export.png");
-        if (!surface) {
-            printf("Erro ao carregar a imagem %s\n", SDL_GetError());
-            game_is_running = FALSE;
-        }
-        game->hero_image = SDL_CreateTextureFromSurface(renderer, surface);
-        SDL_FreeSurface(surface);
+        change_spritesheet(game, "images/sprites/spr_running-export.png");
 
         game->hero.x += 2.5f;
     } else if (state[SDL_SCANCODE_LEFT]) {
         position = LEFT;
         hero_is_running = TRUE;
 
-        surface = IMG_Load("images/sprites/spr_running-export.png");
-        if (!surface) {
-            printf("Erro ao carregar a imagem %s\n", SDL_GetError());
-            game_is_running = FALSE;
-        }
-        game->hero_image = SDL_CreateTextureFromSurface(renderer, surface);
-        SDL_FreeSurface(surface);
+        change_spritesheet(game, "images/sprites/spr_running-export.png");
 
         game->hero.x -= 2.5f;
 
     } else if (hero_is_jumping && test_is_jumping(game)) {
 
-        surface = IMG_Load("images/sprites/spr_idle-export.png");
-        if (!surface) {
-            printf("Erro ao carregar a imagem %s\n", SDL_GetError());
-            game_is_running = FALSE;
-        }
-        game->hero_image = SDL_CreateTextureFromSurface(renderer, surface);
-        SDL_FreeSurface(surface);
+        change_spritesheet(game, "images/sprites/spr_idle-export.png");
 
         hero_is_jumping = FALSE;
     } else if (hero_is_running) {
-
-        surface = IMG_Load("images/sprites/spr_idle-export.png");
-        if (!surface) {
-            printf("Erro ao carregar a imagem %s\n", SDL_GetError());
-            game_is_running = FALSE;
-        }
-        game->hero_image = SDL_CreateTextureFromSurface(renderer, surface);
-        SDL_FreeSurface(surface);
+        change_spritesheet(game, "images/sprites/spr_idle-export.png");
         
         hero_is_running = FALSE;
     }

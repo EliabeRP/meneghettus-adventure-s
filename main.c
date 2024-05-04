@@ -1,8 +1,11 @@
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_image.h>
 #include <stdio.h>
-#include "src/include/SDL2/SDL.h"
-#include "src/include/SDL2/SDL_image.h"
-#include "constants.h"
 #include <windows.h>
+#include "constants.h"
+
+SDL_Rect heroSource = {0, 0, 0, 0};
+SDL_Rect heroDestination = {0, 0 , 0, 0};
 
 int game_is_running = TRUE;
 SDL_Window *window;
@@ -29,8 +32,25 @@ typedef struct {
     SDL_Texture *background_layer_2;
     SDL_Texture *background_layer_3;
     SDL_Texture *hero_image;
+    //SDL_Texture *hero_running;
     SDL_Texture *block_image;
 } Game;
+
+
+int hero_is_running = FALSE;
+int hero_is_jumping = FALSE;
+int position = RIGHT;
+
+int test_is_jumping(Game *game) {
+    for (int i = 0; i < 100; i++) {
+        float bottom_hero = game->hero.y + 112;
+        if (bottom_hero >= game->block[i].y && game->hero.y <= game->block[i].y + game->block[i].h && game->hero.x + 90 >= game->block[i].x && game->hero.x <= game->block[i].x + game->block[i].w) {
+            return TRUE;
+            break;
+        }
+    }
+    return FALSE;         
+}
 
 void loadTextures(Game *game) {
     surface = IMG_Load("images/background_layer_1.png");
@@ -57,13 +77,14 @@ void loadTextures(Game *game) {
     game->background_layer_3 = SDL_CreateTextureFromSurface(renderer, surface);
     SDL_FreeSurface(surface);
 
-    surface = IMG_Load("images/sprites/teste.png");
+    surface = IMG_Load("images/sprites/spr_idle-export.png");
     if (!surface) {
         printf("Erro ao carregar a imagem %s\n", SDL_GetError());
         game_is_running = FALSE;
     }
     game->hero_image = SDL_CreateTextureFromSurface(renderer, surface);
     SDL_FreeSurface(surface);
+
 
     surface = IMG_Load("images/assets/oak-wood-17.png");
     if (!surface) {
@@ -104,6 +125,8 @@ void setup() {
         game_is_running = FALSE;
     }
 
+    heroDestination.x = heroSource.x = 0;
+    heroDestination.y = heroSource.y = 0;
 }
 
 void process_input(Game *game) {
@@ -114,39 +137,104 @@ void process_input(Game *game) {
         case SDL_QUIT:
             game_is_running = FALSE;
             break;
+        case SDL_KEYDOWN:
+        {
+            switch (event.key.keysym.sym) {
+                case SDLK_UP:
+                {
+                    if (test_is_jumping(game)) {
+                        game->hero.velocity = -3.0f;
+                        game->hero.y -= 50.0f;
+                    }
+                    
+                    hero_is_jumping = TRUE;
+
+                    surface = IMG_Load("images/sprites/spr_jumping-export.png");
+                    if (!surface) {
+                        printf("Erro ao carregar a imagem %s\n", SDL_GetError());
+                        game_is_running = FALSE;
+                    }
+                    game->hero_image = SDL_CreateTextureFromSurface(renderer, surface);
+                    SDL_FreeSurface(surface);
+                    
+                }
+            }
+        }
     }
+   
 
     const Uint8 *state = SDL_GetKeyboardState(NULL);
 
     if (state[SDL_SCANCODE_RIGHT]) {
-        game->hero.x += 2.5f;
-    }
-    if (state[SDL_SCANCODE_LEFT]) {
-        game->hero.x -= 2.5f;
-    }
-    if (state[SDL_SCANCODE_UP]) {
-        for (int i = 0; i < 100; i++) {
-            float bottom_hero = game->hero.y + 100;
-            if (bottom_hero >= game->block[i].y && game->hero.y <= game->block[i].y + game->block[i].h && game->hero.x + 90 >= game->block[i].x && game->hero.x <= game->block[i].x + game->block[i].w) {
-                game->hero.velocity = -3.0f;
-                game->hero.y -= 50.0f;
-                break;
-            }
+        position = RIGHT;
+        hero_is_running = TRUE;
+
+        surface = IMG_Load("images/sprites/spr_running-export.png");
+        if (!surface) {
+            printf("Erro ao carregar a imagem %s\n", SDL_GetError());
+            game_is_running = FALSE;
         }
+        game->hero_image = SDL_CreateTextureFromSurface(renderer, surface);
+        SDL_FreeSurface(surface);
+
+        game->hero.x += 2.5f;
+    } else if (state[SDL_SCANCODE_LEFT]) {
+        position = LEFT;
+        hero_is_running = TRUE;
+
+        surface = IMG_Load("images/sprites/spr_running-export.png");
+        if (!surface) {
+            printf("Erro ao carregar a imagem %s\n", SDL_GetError());
+            game_is_running = FALSE;
+        }
+        game->hero_image = SDL_CreateTextureFromSurface(renderer, surface);
+        SDL_FreeSurface(surface);
+
+        game->hero.x -= 2.5f;
+
+    } else if (hero_is_jumping && test_is_jumping(game)) {
+
+        surface = IMG_Load("images/sprites/spr_idle-export.png");
+        if (!surface) {
+            printf("Erro ao carregar a imagem %s\n", SDL_GetError());
+            game_is_running = FALSE;
+        }
+        game->hero_image = SDL_CreateTextureFromSurface(renderer, surface);
+        SDL_FreeSurface(surface);
+
+        hero_is_jumping = FALSE;
+    } else if (hero_is_running) {
+
+        surface = IMG_Load("images/sprites/spr_idle-export.png");
+        if (!surface) {
+            printf("Erro ao carregar a imagem %s\n", SDL_GetError());
+            game_is_running = FALSE;
+        }
+        game->hero_image = SDL_CreateTextureFromSurface(renderer, surface);
+        SDL_FreeSurface(surface);
+        
+        hero_is_running = FALSE;
     }
+
+
     if (state[SDL_SCANCODE_DOWN]) {
         game->hero.y += 0.1f;
     }
+
 }
 
 void update(Game *game) {
     game->hero.y += game->hero.velocity;
     game->hero.velocity += GRAVITY;
-
-    if (game->hero.y >= WINDOW_HEIGHT - 100) {
-        game->hero.y = WINDOW_HEIGHT - 100;
+    
+    if (game->hero.y >= WINDOW_HEIGHT - 156) {
+        game->hero.y = WINDOW_HEIGHT - 156; 
         game->hero.velocity = 0.0f;
     }
+
+    heroDestination.x = game->hero.x;
+    heroDestination.y = game->hero.y;
+    heroSource.x = 112 * (int) ((SDL_GetTicks() / 100) % 6);
 }
 
 void render(Game *game) {
@@ -156,9 +244,20 @@ void render(Game *game) {
     SDL_RenderCopy(renderer, game->background_layer_1, NULL, NULL);
     SDL_RenderCopy(renderer, game->background_layer_2, NULL, NULL);
     SDL_RenderCopy(renderer, game->background_layer_3, NULL, NULL);
+    
 
-    SDL_Rect rectHero = { game->hero.x-45, game->hero.y-50, 90, 100 };
-    SDL_RenderCopy(renderer, game->hero_image, NULL, &rectHero);
+    //SDL_Rect rectHero = { game->hero.x-45, game->hero.y-50, 90, 100 };
+    //SDL_RenderCopy(renderer, game->hero_image, NULL, &rectHero);
+    heroDestination.w = heroSource.w;
+    heroDestination.h = heroSource.h;
+    heroSource.w = 112;
+    heroSource.h = 112;
+
+    if (position == RIGHT) {
+        SDL_RenderCopy(renderer, game->hero_image, &heroSource, &heroDestination);
+    } else {
+        SDL_RenderCopyEx(renderer, game->hero_image, &heroSource, &heroDestination, 0, 0, SDL_FLIP_HORIZONTAL);
+    }
 
     for (int i = 0; i < 100; i++) {
         game->block[i].w = 48;
@@ -192,7 +291,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     game.hero.x = WINDOW_WIDTH/2;
     game.hero.y = WINDOW_HEIGHT/2;
     game.hero.velocity = 0.03;
-
 
     loadTextures(&game);
 

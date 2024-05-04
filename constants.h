@@ -9,3 +9,5 @@
 
 #define GRAVITY 0.5f
 
+#define RIGHT 2
+#define LEFT 3

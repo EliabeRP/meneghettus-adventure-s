@@ -1,6 +1,7 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
 #include <stdio.h>
+#include <math.h>
 #include <windows.h>
 #include "constants.h"
 
@@ -30,6 +31,8 @@ typedef struct {
     float x, y;
     float velocity;
     int life;
+    int orc_direction;
+    int orc_is_running;
 } Orc;
 
 typedef struct {
@@ -49,7 +52,8 @@ typedef struct {
 int hero_is_running = FALSE;
 int hero_is_jumping = FALSE;
 int hero_is_attacking = FALSE;
-int position = RIGHT;
+int hero_direction = RIGHT;
+
 
 int map[MAP_HEIGHT][MAP_WIDTH] = {
         {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
@@ -84,6 +88,7 @@ int map[MAP_HEIGHT][MAP_WIDTH] = {
         {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}
     };
 
+
 int test_is_jumping(Game *game) {
     for (int i = 0; i < 100; i++) {
         float bottom_hero = game->hero.y + 112;
@@ -104,6 +109,49 @@ void change_spritesheet(Game *game, char *source) {
         game->hero_image = SDL_CreateTextureFromSurface(renderer, surface);
     SDL_FreeSurface(surface);
 }
+
+void change_orc_spritesheet(Game *game, char *source) {
+    surface = IMG_Load(source);
+        if (!surface) {
+            printf("Erro ao carregar a imagem %s\n", SDL_GetError());
+            game_is_running = FALSE;
+        }
+        game->orc_image = SDL_CreateTextureFromSurface(renderer, surface);
+    SDL_FreeSurface(surface);
+}
+
+void animate_orc(Game *game) {
+
+    if (game->orc.x < game->hero.x - 32) {
+        change_orc_spritesheet(game, "images/assets/Orc_Warrior/Run.png");
+        game->orc.orc_is_running = TRUE;
+        game->orc.orc_direction = RIGHT;
+        game->orc.x += 1.5f;
+    } else if (game->orc.x > game->hero.x + 32) {
+        change_orc_spritesheet(game, "images/assets/Orc_Warrior/Run.png");
+        game->orc.orc_is_running = TRUE;
+        game->orc.orc_direction = LEFT;
+        game->orc.x -= 1.5f;
+    } else {
+        change_orc_spritesheet(game, "images/assets/Orc_Warrior/Attack_1.png");
+        game->orc.orc_is_running = FALSE;
+    }
+    
+}
+
+void attackOrc(Game *game) {
+    if (hero_is_attacking) {
+        float distance = sqrt(pow(game->hero.x - game->orc.x, 2) + pow(game->hero.y - game->orc.y, 2));
+        if (distance < 50) { 
+            game->orc.life -= 1;
+            if (game->orc.life <= 0) {
+                printf("Orc morto!\n");
+                change_orc_spritesheet(game, "images/assets/Orc_Warrior/Dead.png");
+            }
+        }
+    }
+}
+
 
 void loadTextures(Game *game) {
     surface = IMG_Load("images/background_layer_1.png");
@@ -242,20 +290,20 @@ void process_input(Game *game) {
     const Uint8 *state = SDL_GetKeyboardState(NULL);
 
     if (state[SDL_SCANCODE_RIGHT] && game->hero.x <= WINDOW_WIDTH - 112) {
-        position = RIGHT;
+        hero_direction = RIGHT;
         hero_is_running = TRUE;
         int can_walk = TRUE;
 
         change_spritesheet(game, "images/sprites/spr_running-export.png");
-        game->hero.x += 10.5f;
+        game->hero.x += 2.5f;
         
     } else if (state[SDL_SCANCODE_LEFT] && game->hero.x >= 0) {
-        position = LEFT;
+        hero_direction = LEFT;
         hero_is_running = TRUE;
 
         change_spritesheet(game, "images/sprites/spr_running-export.png");
 
-        game->hero.x -= 10.5f;
+        game->hero.x -= 2.5f;
 
     } else if (hero_is_jumping && test_is_jumping(game)) {
 
@@ -289,10 +337,19 @@ void update(Game *game) {
     heroDestination.x = game->hero.x;
     heroDestination.y = game->hero.y;
     heroSource.x = 112 * (int) ((SDL_GetTicks() / 100) % 6);
-
+    
     orcDestination.x = game->orc.x;
     orcDestination.y = game->orc.y;
     orcSource.x = 96 * (int) ((SDL_GetTicks() / 100) % 4);
+    
+    if (game->orc.life > 0) {
+        animate_orc(game);
+    } else {
+        change_orc_spritesheet(game, "images/assets/Orc_Warrior/Dead.png");
+        game->orc.orc_is_running = FALSE;
+        game->orc.x = 2000;
+    }
+    attackOrc(game);
 }
 
 void render(Game *game) {
@@ -313,9 +370,16 @@ void render(Game *game) {
     orcSource.w = 96;
     orcSource.h = 96;
 
-    SDL_RenderCopy(renderer, game->orc_image, &orcSource, &orcDestination);
 
-    if (position == RIGHT) {
+
+    if (game->orc.orc_direction == RIGHT) {
+        SDL_RenderCopy(renderer, game->orc_image, &orcSource, &orcDestination);
+    } else {
+        SDL_RenderCopyEx(renderer, game->orc_image, &orcSource, &orcDestination, 0, 0, SDL_FLIP_HORIZONTAL);
+    }
+    
+
+    if (hero_direction == RIGHT) {
         SDL_RenderCopy(renderer, game->hero_image, &heroSource, &heroDestination);
     } else {
         SDL_RenderCopyEx(renderer, game->hero_image, &heroSource, &heroDestination, 0, 0, SDL_FLIP_HORIZONTAL);
@@ -354,8 +418,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     game.hero.y = WINDOW_HEIGHT/2;
     game.hero.velocity = 0.03;
 
-    game.orc.x = WINDOW_WIDTH/2;
+    game.orc.x = WINDOW_WIDTH - 96;
     game.orc.y = WINDOW_HEIGHT - 120;
+    game.orc.life = 100;
 
     loadTextures(&game);
 

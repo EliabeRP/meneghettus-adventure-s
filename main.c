@@ -11,6 +11,8 @@ SDL_Rect orcSource = {0, 0, 0, 0};
 SDL_Rect orcDestination = {0, 0, 0, 0};
 SDL_Rect redOrcSource = {0, 0, 0, 0};
 SDL_Rect redOrcDestination = {0, 0, 0, 0};
+SDL_Rect bossOrcSource = {0, 0, 0, 0};
+SDL_Rect bossOrcDestination = {0, 0, 0, 0};
 
 int game_is_running = TRUE;
 SDL_Window *window;
@@ -45,9 +47,18 @@ typedef struct {
 } Red_Orc;
 
 typedef struct {
+    float x, y;
+    float velocity;
+    int life;
+    int orc_direction;
+    int orc_is_running;
+} Boss_Orc;
+
+typedef struct {
     Hero hero;
     Orc orc;
     Red_Orc red_orc;
+    Boss_Orc boss_orc;
     Block block[390];
     
     SDL_Texture *background_layer_1;
@@ -57,6 +68,7 @@ typedef struct {
     SDL_Texture *block_image;
     SDL_Texture *orc_image;
     SDL_Texture *red_orc_image;
+    SDL_Texture *boss_orc_image;
 } Game;
 
 int orc_count = 0;
@@ -143,6 +155,16 @@ void change_red_orc_spritesheet(Game *game, char *source) {
     SDL_FreeSurface(surface);
 }
 
+void change_boss_orc_spritesheet(Game *game, char *source) {
+    surface = IMG_Load(source);
+        if (!surface) {
+            printf("Erro ao carregar a imagem %s\n", SDL_GetError());
+            game_is_running = FALSE;
+        }
+        game->boss_orc_image = SDL_CreateTextureFromSurface(renderer, surface);
+    SDL_FreeSurface(surface);
+}
+
 void animate_orc(Game *game) {
 
     if (game->orc.x < game->hero.x - 32) {
@@ -181,6 +203,25 @@ void animate_red_orc(Game *game) {
     
 }
 
+void animate_boss_orc(Game *game) {
+
+    if (game->boss_orc.x < game->hero.x - 32) {
+        change_boss_orc_spritesheet(game, "images/assets/Boss/Run.png");
+        game->boss_orc.orc_is_running = TRUE;
+        game->boss_orc.orc_direction = RIGHT;
+        game->boss_orc.x += 1.5f;
+    } else if (game->boss_orc.x > game->hero.x + 32) {
+        change_boss_orc_spritesheet(game, "images/assets/Boss/Run.png");
+        game->boss_orc.orc_is_running = TRUE;
+        game->boss_orc.orc_direction = LEFT;
+        game->boss_orc.x -= 1.5f;
+    } else {
+        change_boss_orc_spritesheet(game, "images/assets/Boss/Attack.png");
+        game->boss_orc.orc_is_running = FALSE;
+    }
+    
+}
+
 void attack_orc(Game *game) {
     if (hero_is_attacking) {
         float distance = sqrt(pow(game->hero.x - game->orc.x, 2) + pow(game->hero.y - game->orc.y, 2));
@@ -207,7 +248,18 @@ void attack_red_orc(Game *game) {
     }
 }
 
-
+void attack_boss_orc(Game *game) {
+    if (hero_is_attacking) {
+        float distance = sqrt(pow(game->hero.x - game->boss_orc.x, 2) + pow(game->hero.y - game->boss_orc.y, 2));
+        if (distance < 50) { 
+            game->boss_orc.life -= 1;
+            if (game->boss_orc.life <= 0) {
+                printf("Boss morto!\n");
+                change_orc_spritesheet(game, "images/assets/Boss/Dead.png");
+            }
+        }
+    }
+}
 
 void loadTextures(Game *game) {
     surface = IMG_Load("images/background_layer_1.png");
@@ -265,6 +317,14 @@ void loadTextures(Game *game) {
     }
     game->red_orc_image = SDL_CreateTextureFromSurface(renderer, surface);
     SDL_FreeSurface(surface);
+
+    surface = IMG_Load("images/assets/Boss/Idle.png");
+    if (!surface) {
+        printf("Erro ao carregar a imagem %s\n", SDL_GetError());
+        game_is_running = FALSE;
+    }
+    game->boss_orc_image = SDL_CreateTextureFromSurface(renderer, surface);
+    SDL_FreeSurface(surface);
 }
 
 
@@ -305,6 +365,10 @@ void setup() {
 
     redOrcDestination.x = redOrcSource.x = 0;
     redOrcDestination.y = redOrcSource.y = 0;
+
+    bossOrcDestination.x = bossOrcSource.x = 0;
+    bossOrcDestination.x = bossOrcSource.y = 0;
+    
 }
 
 
@@ -414,6 +478,10 @@ void update(Game *game) {
     redOrcDestination.x = game->red_orc.x;
     redOrcDestination.y = game->red_orc.y;
     redOrcSource.x = 96 * (int) ((SDL_GetTicks() / 100) % 4);
+
+    bossOrcDestination.x = game->boss_orc.x;
+    bossOrcDestination.y = game->boss_orc.y;
+    bossOrcSource.x = 288 * (int) ((SDL_GetTicks() / 100) % 6);
     
     if (game->orc.life > 0) {
         animate_orc(game);
@@ -444,6 +512,21 @@ void update(Game *game) {
         game->red_orc.x = 1300;
     }
     attack_red_orc(game);
+
+    if (game->boss_orc.life > 0) {
+        animate_boss_orc(game);
+    } else {
+        change_boss_orc_spritesheet(game, "images/assets/Boss/Dead.png");
+        if (orc_count < 5) {
+            game->boss_orc.orc_is_running = TRUE;
+            game->boss_orc.life = 100;
+            orc_count++;
+        } else {
+            game->boss_orc.orc_is_running = FALSE;
+        }
+        game->boss_orc.x = 1300;
+    }
+    attack_boss_orc(game);
 }
 
 
@@ -469,6 +552,17 @@ void render(Game *game) {
     redOrcDestination.h = redOrcSource.h;
     redOrcSource.w = 96;
     redOrcSource.h = 96;
+
+    bossOrcDestination.w = bossOrcSource.w;
+    bossOrcDestination.h = bossOrcSource.h;
+    bossOrcSource.w = 288;
+    bossOrcSource.h = 288;
+
+    if (game->boss_orc.orc_direction == RIGHT) {
+        SDL_RenderCopy(renderer, game->boss_orc_image, &bossOrcSource, &bossOrcDestination);
+    } else {
+        SDL_RenderCopyEx(renderer, game->boss_orc_image, &bossOrcSource, &bossOrcDestination, 0, 0, SDL_FLIP_HORIZONTAL);
+    }
 
     if (game->red_orc.orc_direction == RIGHT) {
         SDL_RenderCopy(renderer, game->red_orc_image, &redOrcSource, &redOrcDestination);
@@ -507,6 +601,7 @@ void end(Game *game) {
     SDL_DestroyTexture(game->hero_image);
     SDL_DestroyTexture(game->orc_image);
     SDL_DestroyTexture(game->red_orc_image);
+    SDL_DestroyTexture(game->boss_orc_image);
     SDL_DestroyTexture(game->background_layer_1);
     SDL_DestroyTexture(game->background_layer_2);
     SDL_DestroyTexture(game->background_layer_3);
@@ -531,6 +626,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     game.red_orc.x = 96;
     game.red_orc.y = WINDOW_HEIGHT - 120;
     game.red_orc.life = 100;
+
+    game.boss_orc.x = 96;
+    game.boss_orc.y = WINDOW_HEIGHT - 120;
+    game.boss_orc.life = 100;
 
     loadTextures(&game);
 

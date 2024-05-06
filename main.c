@@ -63,6 +63,7 @@ typedef struct {
 
 TTF_Font* kill_font = NULL;
 TTF_Font* life_font = NULL;
+TTF_Font* gameover_font = NULL;
 
 
 int orc_count = 0;
@@ -176,7 +177,7 @@ void animate_orc(Game *game) {
         change_orc_spritesheet(game, "images/assets/Orc_Warrior/Attack_1.png");
         game->orc.orc_is_running = FALSE;
         if (game->hero.life > 0){
-            game->hero.life -= 0.3;
+            game->hero.life -= 0.5;
         }
     }
     
@@ -198,7 +199,7 @@ void animate_red_orc(Game *game) {
         change_red_orc_spritesheet(game, "images/assets/Orc_Berserk/Attack_1.png");
         game->red_orc.orc_is_running = FALSE;
         if (game->hero.life > 0){
-            game->hero.life -= 0.3;
+            game->hero.life -= 2;
         }
     }
     
@@ -333,6 +334,12 @@ void setup() {
 
     life_font = TTF_OpenFont("Minecraft.ttf", 50);
     if (!life_font) {
+        printf("Erro ao carregar a fonte: %s\n", TTF_GetError());
+        game_is_running = FALSE;
+    }
+
+    gameover_font = TTF_OpenFont("Minecraft.ttf", 100);
+    if (!gameover_font) {
         printf("Erro ao carregar a fonte: %s\n", TTF_GetError());
         game_is_running = FALSE;
     }
@@ -497,7 +504,7 @@ void update(Game *game) {
         animate_orc(game);
     } else {
         change_orc_spritesheet(game, "images/assets/Orc_Warrior/Dead.png");
-        if (orc_count < 5) {
+        if (orc_count < 100) {
             game->orc.orc_is_running = TRUE;
             game->orc.life = 100;
         } else {
@@ -511,7 +518,7 @@ void update(Game *game) {
         animate_red_orc(game);
     } else {
         change_red_orc_spritesheet(game, "images/assets/Orc_Berserk/Dead.png");
-        if (orc_count < 5) {
+        if (orc_count < 100) {
             game->red_orc.orc_is_running = TRUE;
             game->red_orc.life = 100;
         } else {
@@ -580,7 +587,6 @@ void render(Game *game) {
         }
     }
 
-    // Kill count
     SDL_Color textColor = {255, 255, 255, 255};
     char kill_text[20];
     sprintf(kill_text, "Kills:%d", kill_count);
@@ -602,6 +608,19 @@ void render(Game *game) {
         SDL_Rect textRect = {1000, 10, text_width, text_height};
         SDL_RenderCopy(renderer, lifeTexture, NULL, &textRect);
         SDL_DestroyTexture(lifeTexture);
+    }
+
+    char gameover_text[20];
+    sprintf(gameover_text, "GAME OVER");
+    SDL_Texture* gameoverTexture = renderText(gameover_text, gameover_font, textColor, renderer);
+    if (game->hero.life <= 0){
+        if (gameoverTexture){
+            int text_width, text_height;
+            SDL_QueryTexture(gameoverTexture, NULL, NULL, &text_width, &text_height);
+            SDL_Rect textRect = {300, 360, text_width, text_height};
+            SDL_RenderCopy(renderer, gameoverTexture, NULL, &textRect);
+            SDL_DestroyTexture(gameoverTexture);
+        }
     }
   
     SDL_RenderPresent(renderer);

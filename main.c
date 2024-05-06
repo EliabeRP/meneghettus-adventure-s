@@ -175,7 +175,9 @@ void animate_orc(Game *game) {
     } else {
         change_orc_spritesheet(game, "images/assets/Orc_Warrior/Attack_1.png");
         game->orc.orc_is_running = FALSE;
-        game->hero.life -= 0.3;
+        if (game->hero.life > 0){
+            game->hero.life -= 0.3;
+        }
     }
     
 }
@@ -195,7 +197,9 @@ void animate_red_orc(Game *game) {
     } else {
         change_red_orc_spritesheet(game, "images/assets/Orc_Berserk/Attack_1.png");
         game->red_orc.orc_is_running = FALSE;
-        game->hero.life -= 0.3;
+        if (game->hero.life > 0){
+            game->hero.life -= 0.3;
+        }
     }
     
 }
@@ -321,17 +325,51 @@ void setup() {
         game_is_running = FALSE;
     }
 
-    kill_font = TTF_OpenFont("Minecraft.ttf", 50); // Use a fonte desejada e o tamanho
+    kill_font = TTF_OpenFont("Minecraft.ttf", 50);
     if (!kill_font) {
         printf("Erro ao carregar a fonte: %s\n", TTF_GetError());
         game_is_running = FALSE;
     }
 
-    life_font = TTF_OpenFont("Minecraft.ttf", 50); // Use a fonte desejada e o tamanho
+    life_font = TTF_OpenFont("Minecraft.ttf", 50);
     if (!life_font) {
         printf("Erro ao carregar a fonte: %s\n", TTF_GetError());
         game_is_running = FALSE;
     }
+
+    if (SDL_Init(SDL_INIT_AUDIO) != 0) {
+    printf("Erro ao inicializar o SDL Audio: %s\n", SDL_GetError());
+    game_is_running = FALSE;
+    return;
+    }
+
+    //const int VOLUME = 1; // 0 a 128
+
+    SDL_AudioSpec wavSpec;
+    Uint32 wavLength;
+    Uint8 *wavBuffer;
+
+    if (SDL_LoadWAV("backgroundmusic.wav", &wavSpec, &wavBuffer, &wavLength) == NULL){
+        printf("Erro ao carregar o áudio: %s\n", SDL_GetError());
+        game_is_running = FALSE;
+        return;
+    }
+
+   /*for (int i = 0; i < wavLength; i++) {
+        wavBuffer[i] = (Uint8)((int)wavBuffer[i] * VOLUME / 128);
+    }*/
+
+    int deviceId = SDL_OpenAudioDevice(NULL, 0, &wavSpec, NULL, 0);
+    if (deviceId == 0) {
+        printf("Erro ao abrir o dispositivo de áudio: %s\n", SDL_GetError());
+        game_is_running = FALSE;
+        return;
+    }
+
+    SDL_QueueAudio(deviceId, wavBuffer, wavLength);
+    SDL_PauseAudioDevice(deviceId, 0);
+
+    SDL_FreeWAV(wavBuffer);
 
     heroDestination.x = heroSource.x = 0;
     heroDestination.y = heroSource.y = 0;
@@ -545,7 +583,7 @@ void render(Game *game) {
     // Kill count
     SDL_Color textColor = {255, 255, 255, 255};
     char kill_text[20];
-    sprintf(kill_text, "Kills: %d", kill_count);
+    sprintf(kill_text, "Kills:%d", kill_count);
     SDL_Texture* killTexture = renderText(kill_text, kill_font, textColor, renderer);
     if (killTexture){
         int text_width, text_height;
@@ -556,7 +594,7 @@ void render(Game *game) {
     }
 
     char life_text[20];
-    sprintf(life_text, "Life: %.0f", game->hero.life);
+    sprintf(life_text, "Life:%.0f", game->hero.life);
     SDL_Texture* lifeTexture = renderText(life_text, life_font, textColor, renderer);
     if (lifeTexture){
         int text_width, text_height;
@@ -565,10 +603,9 @@ void render(Game *game) {
         SDL_RenderCopy(renderer, lifeTexture, NULL, &textRect);
         SDL_DestroyTexture(lifeTexture);
     }
-
-
-    
+  
     SDL_RenderPresent(renderer);
+
 }
 
 
@@ -584,6 +621,7 @@ void end(Game *game) {
     SDL_DestroyWindow(window);
     IMG_Quit();
     TTF_Quit();
+    SDL_CloseAudio();
     SDL_Quit();
 }
 
@@ -618,7 +656,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         if (delta < DESIREDDELTA){
             SDL_Delay(DESIREDDELTA - delta);
         }
-
     }
 
     end(&game);
